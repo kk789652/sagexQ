@@ -15,12 +15,14 @@ import com.tiswu.sagex.ui.conversations.ConversationListScreen
 import com.tiswu.sagex.ui.conversations.ConversationListViewModel
 import com.tiswu.sagex.ui.capture.CaptureSettingsScreen
 import com.tiswu.sagex.ui.home.HomeScreen
+import com.tiswu.sagex.ui.prompt.PromptConfigScreen
 import com.tiswu.sagex.ui.settings.SettingsScreen
 import com.tiswu.sagex.ui.summary.SummaryScreen
 
 object Routes {
     const val HOME = "home"
     const val SETTINGS = "settings"
+    const val PROMPT_CONFIG = "prompt-config"
     const val CAPTURE_SETTINGS = "capture-settings"
     const val ABOUT = "about"
     private const val SOURCE_PACKAGE = ConversationListViewModel.ARG_SOURCE_PACKAGE
@@ -42,6 +44,7 @@ fun SageXNavHost(navController: NavHostController = rememberNavController()) {
                 onOpenApp = { sourcePackage -> navController.navigate(Routes.conversations(sourcePackage)) },
                 onOpenCaptureSettings = { navController.navigate(Routes.CAPTURE_SETTINGS) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                onOpenPromptConfig = { navController.navigate(Routes.PROMPT_CONFIG) },
                 onOpenAbout = { navController.navigate(Routes.ABOUT) },
             )
         }
@@ -75,6 +78,9 @@ fun SageXNavHost(navController: NavHostController = rememberNavController()) {
         }
         composable(Routes.SETTINGS) {
             SettingsScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.PROMPT_CONFIG) {
+            PromptConfigScreen(onBack = { navController.popBackStack() })
         }
         composable(Routes.CAPTURE_SETTINGS) {
             CaptureSettingsScreen(onBack = { navController.popBackStack() })

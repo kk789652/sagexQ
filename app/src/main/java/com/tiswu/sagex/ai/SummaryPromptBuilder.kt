@@ -10,19 +10,17 @@ object SummaryPromptBuilder {
 
     const val DEFAULT_MAX_MESSAGES = 200
 
-    private const val SYSTEM_PROMPT =
-        "你是一个聊天记录总结助手。请用简洁的中文总结以下聊天内容,提炼要点、待办事项和需要关注的重要信息。" +
-            "如果有人提出问题或请求,请单独列出。"
-
     private val TIME_FORMAT = DateTimeFormatter.ofPattern("MM-dd HH:mm")
 
     /**
+     * @param systemPrompt system instruction to send with the summary request.
      * @param max cap on included messages; when exceeded, only the most recent [max] are used.
      * @return system + user chat messages, or an empty list if there is nothing to summarize.
      */
     fun build(
         conversationTitle: String,
         messages: List<CapturedMessage>,
+        systemPrompt: String,
         max: Int = DEFAULT_MAX_MESSAGES,
         zone: ZoneId = ZoneId.systemDefault(),
     ): List<ChatMessage> {
@@ -35,7 +33,7 @@ object SummaryPromptBuilder {
         }
         val user = "会话:$conversationTitle\n\n以下是聊天记录:\n$transcript"
         return listOf(
-            ChatMessage(role = "system", content = SYSTEM_PROMPT),
+            ChatMessage(role = "system", content = systemPrompt),
             ChatMessage(role = "user", content = user),
         )
     }

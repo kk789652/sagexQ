@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
@@ -61,6 +62,7 @@ fun HomeScreen(
     onOpenApp: (String) -> Unit = {},
     onOpenCaptureSettings: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
+    onOpenPromptConfig: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -86,6 +88,10 @@ fun HomeScreen(
                 onOpenSettings = {
                     scope.launch { drawerState.close() }
                     onOpenSettings()
+                },
+                onOpenPromptConfig = {
+                    scope.launch { drawerState.close() }
+                    onOpenPromptConfig()
                 },
                 onDeleteMessages = {
                     scope.launch { drawerState.close() }
@@ -165,6 +171,7 @@ private fun HomeDrawer(
     captureInactive: Boolean,
     onOpenCaptureSettings: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenPromptConfig: () -> Unit,
     onDeleteMessages: () -> Unit,
     onOpenAbout: () -> Unit,
 ) {
@@ -187,6 +194,13 @@ private fun HomeDrawer(
             selected = false,
             onClick = onOpenSettings,
             icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+            modifier = Modifier.padding(horizontal = 12.dp),
+        )
+        NavigationDrawerItem(
+            label = { Text("Prompt 配置") },
+            selected = false,
+            onClick = onOpenPromptConfig,
+            icon = { Icon(Icons.Default.Edit, contentDescription = null) },
             modifier = Modifier.padding(horizontal = 12.dp),
         )
         NavigationDrawerItem(

@@ -10,6 +10,7 @@ import java.time.ZoneId
 class SummaryPromptBuilderTest {
 
     private val utc = ZoneId.of("UTC")
+    private val systemPrompt = "自定义系统提示"
 
     private fun msg(body: String, postedAt: Long = 1_700_000_000_000L) = CapturedMessage(
         sourcePackage = "com.tencent.mm",
@@ -23,14 +24,15 @@ class SummaryPromptBuilderTest {
 
     @Test
     fun `empty messages yield no prompt`() {
-        assertTrue(SummaryPromptBuilder.build("群", emptyList()).isEmpty())
+        assertTrue(SummaryPromptBuilder.build("群", emptyList(), systemPrompt).isEmpty())
     }
 
     @Test
     fun `produces system and user messages`() {
-        val prompt = SummaryPromptBuilder.build("群", listOf(msg("你好")), zone = utc)
+        val prompt = SummaryPromptBuilder.build("群", listOf(msg("你好")), systemPrompt, zone = utc)
         assertEquals(2, prompt.size)
         assertEquals("system", prompt[0].role)
+        assertEquals(systemPrompt, prompt[0].content)
         assertEquals("user", prompt[1].role)
         assertTrue(prompt[1].content.contains("张三: 你好"))
         assertTrue(prompt[1].content.contains("群"))
@@ -39,7 +41,7 @@ class SummaryPromptBuilderTest {
     @Test
     fun `caps to the most recent messages`() {
         val messages = (1..5).map { msg("m$it", postedAt = 1_700_000_000_000L + it) }
-        val prompt = SummaryPromptBuilder.build("群", messages, max = 2, zone = utc)
+        val prompt = SummaryPromptBuilder.build("群", messages, systemPrompt, max = 2, zone = utc)
         val user = prompt[1].content
         assertTrue(user.contains("m4"))
         assertTrue(user.contains("m5"))

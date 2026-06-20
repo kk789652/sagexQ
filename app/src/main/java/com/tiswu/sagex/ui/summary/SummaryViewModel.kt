@@ -6,9 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.tiswu.sagex.ai.OpenAiClient
 import com.tiswu.sagex.ai.SummaryPromptBuilder
 import com.tiswu.sagex.data.MessageRepository
+import com.tiswu.sagex.data.prefs.ApiSettings
+import com.tiswu.sagex.data.prefs.PromptSettings
 import com.tiswu.sagex.domain.TimeRange
 import com.tiswu.sagex.domain.filterByRange
-import com.tiswu.sagex.data.prefs.ApiSettings
 import com.tiswu.sagex.ui.conversations.ConversationDetailViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,6 +38,7 @@ data class SummaryUiState(
 class SummaryViewModel @Inject constructor(
     private val repository: MessageRepository,
     private val apiSettings: ApiSettings,
+    private val promptSettings: PromptSettings,
     private val client: OpenAiClient,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -64,8 +66,16 @@ class SummaryViewModel @Inject constructor(
                 _state.update { it.copy(status = SummaryStatus.Empty) }
                 return@launch
             }
-            val title = messages.firstOrNull()?.conversationTitle ?: "会话"
-            val prompt = SummaryPromptBuilder.build(title, inRange)
+            val title = inRange.firstOrNull()?.conversationTitle ?: "会话"
+            val sourcePackage = inRange.firstOrNull()?.sourcePackage.orEmpty()
+            val systemPrompt = promptSettings.currentPrompt(sourcePackage)
+                .takeIf { it.isNotBlank() }
+                ?: PromptSettings.DEFAULT_PROMPT
+            val prompt = SummaryPromptBuilder.build(
+                conversationTitle = title,
+                messages = inRange,
+                systemPrompt = systemPrompt,
+            )
 
             _state.update { it.copy(status = SummaryStatus.Loading) }
             val result = client.summarize(config, prompt)

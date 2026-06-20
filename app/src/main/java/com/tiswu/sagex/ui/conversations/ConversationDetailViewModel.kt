@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tiswu.sagex.ai.TranscriptExporter
 import com.tiswu.sagex.data.MessageRepository
-import com.tiswu.sagex.data.prefs.ExportSettings
+import com.tiswu.sagex.data.prefs.PromptSettings
 import com.tiswu.sagex.domain.TimeRange
 import com.tiswu.sagex.domain.filterByRange
 import com.tiswu.sagex.domain.model.CapturedMessage
@@ -19,7 +19,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ConversationDetailViewModel @Inject constructor(
     private val repository: MessageRepository,
-    private val exportSettings: ExportSettings,
+    private val promptSettings: PromptSettings,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -51,8 +51,12 @@ class ConversationDetailViewModel @Inject constructor(
                 onReady(null)
                 return@launch
             }
-            val title = all.firstOrNull()?.conversationTitle ?: "会话"
-            onReady(TranscriptExporter.export(title, inRange, exportSettings.current()))
+            val title = inRange.firstOrNull()?.conversationTitle ?: "会话"
+            val sourcePackage = inRange.firstOrNull()?.sourcePackage.orEmpty()
+            val instructionHeader = promptSettings.currentPrompt(sourcePackage)
+                .takeIf { it.isNotBlank() }
+                ?: PromptSettings.DEFAULT_PROMPT
+            onReady(TranscriptExporter.export(title, inRange, instructionHeader))
         }
     }
 

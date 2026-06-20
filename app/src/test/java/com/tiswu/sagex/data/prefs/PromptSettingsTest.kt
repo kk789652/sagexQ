@@ -14,34 +14,36 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
 
-class ExportSettingsTest {
+class PromptSettingsTest {
 
     @get:Rule
     val tmpFolder = TemporaryFolder()
 
     private fun newDataStore(scope: CoroutineScope): DataStore<Preferences> =
         PreferenceDataStoreFactory.create(scope = scope) {
-            File(tmpFolder.root, "export.preferences_pb")
+            File(tmpFolder.root, "prompt.preferences_pb")
         }
 
     @Test
-    fun `default is the summarize prompt`() = runTest {
+    fun `default is the summary prompt`() = runTest {
         val scope = CoroutineScope(Dispatchers.IO + Job())
         try {
-            val settings = ExportSettings(newDataStore(scope))
-            assertEquals(ExportSettings.DEFAULT_INSTRUCTION, settings.current())
+            val settings = PromptSettings(newDataStore(scope))
+            assertEquals(PromptSettings.DEFAULT_PROMPT, settings.currentPrompt("com.tencent.mm"))
         } finally {
             scope.cancel()
         }
     }
 
     @Test
-    fun `set instruction round-trips`() = runTest {
+    fun `set prompt round-trips per app`() = runTest {
         val scope = CoroutineScope(Dispatchers.IO + Job())
         try {
-            val settings = ExportSettings(newDataStore(scope))
-            settings.setInstructionHeader("自定义提示")
-            assertEquals("自定义提示", settings.current())
+            val settings = PromptSettings(newDataStore(scope))
+            settings.setPrompt("com.tencent.mm", "微信提示")
+
+            assertEquals("微信提示", settings.currentPrompt("com.tencent.mm"))
+            assertEquals(PromptSettings.DEFAULT_PROMPT, settings.currentPrompt("com.example.other"))
         } finally {
             scope.cancel()
         }
