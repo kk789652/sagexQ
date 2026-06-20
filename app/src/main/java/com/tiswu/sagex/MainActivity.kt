@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.tiswu.sagex.ui.home.HomeScreen
+import com.tiswu.sagex.ui.SageXNavHost
 import com.tiswu.sagex.ui.theme.SageXTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -15,7 +15,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             SageXTheme {
-                HomeScreen()
+                SageXNavHost()
             }
         }
     }

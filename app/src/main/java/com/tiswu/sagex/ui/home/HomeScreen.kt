@@ -39,7 +39,10 @@ import com.tiswu.sagex.service.AutostartHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
+fun HomeScreen(
+    onOpenConversations: () -> Unit = {},
+    viewModel: HomeViewModel = hiltViewModel(),
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showClearDialog by remember { mutableStateOf(false) }
@@ -63,6 +66,13 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             StatusCard(state = state)
+
+            Button(
+                onClick = onOpenConversations,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("查看会话")
+            }
 
             if (!state.accessGranted) {
                 Button(
