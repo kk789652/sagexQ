@@ -10,12 +10,13 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class ConversationListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    repository: MessageRepository,
+    private val repository: MessageRepository,
 ) : ViewModel() {
 
     val sourcePackage: String =
@@ -31,6 +32,10 @@ class ConversationListViewModel @Inject constructor(
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = emptyList(),
             )
+
+    fun deleteConversation(conversationKey: String) {
+        viewModelScope.launch { repository.deleteConversation(conversationKey) }
+    }
 
     companion object {
         const val ARG_SOURCE_PACKAGE = "sourcePackage"

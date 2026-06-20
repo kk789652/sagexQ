@@ -1,6 +1,9 @@
 package com.tiswu.sagex.ui.conversations
 
+import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,7 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -31,7 +34,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import android.widget.Toast
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -62,6 +64,7 @@ fun ConversationDetailScreen(
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
+    var messageToDelete by remember { mutableStateOf<CapturedMessage?>(null) }
 
     Scaffold(
         topBar = {
@@ -121,16 +124,14 @@ fun ConversationDetailScreen(
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                // Index is part of the key because the domain model carries no row id and two
-                // messages can share the same timestamp + body; index keeps keys unique and is
-                // stable for this append-only, chronological list.
-                itemsIndexed(
+                items(
                     items = messages,
-                    key = { index, message -> "$index-${message.postedAt}" },
-                ) { _, message ->
+                    key = { it.id },
+                ) { message ->
                     MessageItem(
                         message = message,
                         showSender = message.conversationType == ConversationType.GROUP,
+                        onLongClick = { messageToDelete = message },
                     )
                 }
             }
@@ -188,10 +189,32 @@ fun ConversationDetailScreen(
             },
         )
     }
+
+    messageToDelete?.let { message ->
+        AlertDialog(
+            onDismissRequest = { messageToDelete = null },
+            title = { Text("删除消息") },
+            text = { Text("将永久删除这条消息,无法恢复。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteMessage(message.id)
+                    messageToDelete = null
+                }) { Text("删除") }
+            },
+            dismissButton = {
+                TextButton(onClick = { messageToDelete = null }) { Text("取消") }
+            },
+        )
+    }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MessageItem(message: CapturedMessage, showSender: Boolean) {
+private fun MessageItem(
+    message: CapturedMessage,
+    showSender: Boolean,
+    onLongClick: () -> Unit,
+) {
     val avatarName = message.sender?.takeIf { it.isNotBlank() } ?: message.conversationTitle
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -210,6 +233,10 @@ private fun MessageItem(message: CapturedMessage, showSender: Boolean) {
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.surface)
+                    .combinedClickable(
+                        onClick = {},
+                        onLongClick = onLongClick,
+                    )
                     .padding(horizontal = 12.dp, vertical = 8.dp),
             ) {
                 Text(

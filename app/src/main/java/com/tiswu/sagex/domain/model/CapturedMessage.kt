@@ -12,6 +12,7 @@ package com.tiswu.sagex.domain.model
  * @param postedAt notification post time, epoch millis
  */
 data class CapturedMessage(
+    val id: Long = 0,
     val sourcePackage: String,
     val conversationKey: String,
     val conversationType: ConversationType,

@@ -32,6 +32,7 @@ fun CapturedMessage.toEntity(): MessageEntity = MessageEntity(
 )
 
 fun MessageEntity.toDomain(): CapturedMessage = CapturedMessage(
+    id = id,
     sourcePackage = sourcePackage,
     conversationKey = conversationKey,
     conversationType = runCatching { ConversationType.valueOf(conversationType) }

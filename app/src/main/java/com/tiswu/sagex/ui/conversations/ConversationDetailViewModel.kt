@@ -38,6 +38,10 @@ class ConversationDetailViewModel @Inject constructor(
         viewModelScope.launch { repository.deleteByRange(conversationKey, range) }
     }
 
+    fun deleteMessage(id: Long) {
+        viewModelScope.launch { repository.deleteMessage(id) }
+    }
+
     /** Builds the export text for [range]; invokes [onReady] with null when the range is empty. */
     fun export(range: TimeRange, onReady: (String?) -> Unit) {
         viewModelScope.launch {

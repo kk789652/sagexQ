@@ -66,6 +66,34 @@ class MessageDaoTest {
     }
 
     @Test
+    fun `deleteById removes exactly one row`() = runTest {
+        val key = ConversationKey.of(pkg, ConversationType.DIRECT, "李四")
+        val otherKey = ConversationKey.of(pkg, ConversationType.DIRECT, "王五")
+        val firstId = dao.insert(message(ConversationType.DIRECT, "李四", "李四", "first", 100L))
+        dao.insert(message(ConversationType.DIRECT, "李四", "李四", "second", 200L))
+        dao.insert(message(ConversationType.DIRECT, "王五", "王五", "other", 300L))
+
+        dao.deleteById(firstId)
+
+        val stored = dao.byConversation(key)
+        assertEquals(2, dao.count())
+        assertEquals(1, stored.size)
+        assertEquals("second", stored.single().body)
+        assertEquals("other", dao.byConversation(otherKey).single().body)
+    }
+
+    @Test
+    fun `toDomain exposes the row id`() = runTest {
+        val id = dao.insert(message(ConversationType.DIRECT, "李四", "李四", "在吗", 100L))
+
+        val stored = dao.byConversation(ConversationKey.of(pkg, ConversationType.DIRECT, "李四"))
+            .single()
+            .toDomain()
+
+        assertEquals(id, stored.id)
+    }
+
+    @Test
     fun `messages returned in chronological order`() = runTest {
         val key = ConversationKey.of(pkg, ConversationType.GROUP, "群A")
         dao.insert(message(ConversationType.GROUP, "群A", "b", "second", 200L))

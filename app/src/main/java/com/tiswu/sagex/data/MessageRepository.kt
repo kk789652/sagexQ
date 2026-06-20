@@ -55,6 +55,14 @@ class MessageRepository @Inject constructor(
 
     suspend fun clearAll() = withContext(ioDispatcher) { dao.clearAll() }
 
+    suspend fun deleteMessage(id: Long) = withContext(ioDispatcher) {
+        dao.deleteById(id)
+    }
+
+    suspend fun deleteConversation(conversationKey: String) = withContext(ioDispatcher) {
+        dao.deleteInRange(conversationKey, Long.MIN_VALUE, Long.MAX_VALUE)
+    }
+
     suspend fun deleteByRange(range: TimeRange, now: Long = System.currentTimeMillis()) =
         withContext(ioDispatcher) {
             val (start, end) = range.bounds(now)
