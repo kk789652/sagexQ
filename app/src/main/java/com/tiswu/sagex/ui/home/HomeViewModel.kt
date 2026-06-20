@@ -4,7 +4,11 @@ import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tiswu.sagex.data.MessageRepository
+import com.tiswu.sagex.data.prefs.KeepAlivePreferences
 import com.tiswu.sagex.notification.NotificationAccessHelper
+import com.tiswu.sagex.service.AutostartHelper
+import com.tiswu.sagex.service.BatteryOptimizationHelper
+import com.tiswu.sagex.service.ServiceController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,34 +22,64 @@ data class HomeUiState(
     val accessGranted: Boolean = false,
     val totalMessages: Int = 0,
     val lastCapturedAt: Long? = null,
+    val keepAliveEnabled: Boolean = false,
+    val batteryExempt: Boolean = false,
 )
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val repository: MessageRepository,
     private val accessHelper: NotificationAccessHelper,
+    private val keepAlivePreferences: KeepAlivePreferences,
+    private val serviceController: ServiceController,
+    private val batteryHelper: BatteryOptimizationHelper,
+    private val autostartHelper: AutostartHelper,
 ) : ViewModel() {
 
     private val accessGranted = MutableStateFlow(accessHelper.isAccessGranted())
+    private val batteryExempt = MutableStateFlow(batteryHelper.isIgnoringBatteryOptimizations())
 
     val uiState: StateFlow<HomeUiState> = combine(
         accessGranted,
         repository.totalCount,
         repository.lastPostedAt,
-    ) { granted, count, last ->
-        HomeUiState(accessGranted = granted, totalMessages = count, lastCapturedAt = last)
+        keepAlivePreferences.enabled,
+        batteryExempt,
+    ) { granted, count, last, keepAlive, exempt ->
+        HomeUiState(
+            accessGranted = granted,
+            totalMessages = count,
+            lastCapturedAt = last,
+            keepAliveEnabled = keepAlive,
+            batteryExempt = exempt,
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = HomeUiState(accessGranted = accessHelper.isAccessGranted()),
+        initialValue = HomeUiState(
+            accessGranted = accessHelper.isAccessGranted(),
+            batteryExempt = batteryHelper.isIgnoringBatteryOptimizations(),
+        ),
     )
 
-    /** Re-check access; call when returning from the system settings screen. */
-    fun refreshAccess() {
+    /** Re-check OS-level state; call when returning from a system settings screen. */
+    fun refreshStatus() {
         accessGranted.value = accessHelper.isAccessGranted()
+        batteryExempt.value = batteryHelper.isIgnoringBatteryOptimizations()
+    }
+
+    fun setKeepAlive(enabled: Boolean) {
+        viewModelScope.launch {
+            keepAlivePreferences.setEnabled(enabled)
+            if (enabled) serviceController.start() else serviceController.stop()
+        }
     }
 
     fun settingsIntent(): Intent = accessHelper.settingsIntent()
+
+    fun batteryRequestIntent(): Intent = batteryHelper.requestIntent()
+
+    fun resolveAutostart(): AutostartHelper.Result = autostartHelper.resolve()
 
     fun clearAll() {
         viewModelScope.launch { repository.clearAll() }
