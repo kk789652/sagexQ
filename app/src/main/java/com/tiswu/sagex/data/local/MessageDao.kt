@@ -42,4 +42,10 @@ interface MessageDao {
 
     @Query("DELETE FROM messages")
     suspend fun clearAll()
+
+    @Query("DELETE FROM messages WHERE postedAt >= :start AND postedAt < :end")
+    suspend fun deleteInRange(start: Long, end: Long)
+
+    @Query("DELETE FROM messages WHERE conversationKey = :conversationKey AND postedAt >= :start AND postedAt < :end")
+    suspend fun deleteInRange(conversationKey: String, start: Long, end: Long)
 }

@@ -3,11 +3,11 @@ package com.tiswu.sagex.ui.summary
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.tiswu.sagex.ai.MessageRange
 import com.tiswu.sagex.ai.OpenAiClient
 import com.tiswu.sagex.ai.SummaryPromptBuilder
-import com.tiswu.sagex.ai.filterByRange
 import com.tiswu.sagex.data.MessageRepository
+import com.tiswu.sagex.domain.TimeRange
+import com.tiswu.sagex.domain.filterByRange
 import com.tiswu.sagex.data.prefs.ApiSettings
 import com.tiswu.sagex.ui.conversations.ConversationDetailViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -29,7 +29,7 @@ sealed interface SummaryStatus {
 }
 
 data class SummaryUiState(
-    val range: MessageRange = MessageRange.ALL,
+    val range: TimeRange = TimeRange.All,
     val status: SummaryStatus = SummaryStatus.Idle,
 )
 
@@ -47,7 +47,7 @@ class SummaryViewModel @Inject constructor(
     private val _state = MutableStateFlow(SummaryUiState())
     val state: StateFlow<SummaryUiState> = _state.asStateFlow()
 
-    fun setRange(range: MessageRange) {
+    fun setRange(range: TimeRange) {
         _state.update { it.copy(range = range) }
     }
 

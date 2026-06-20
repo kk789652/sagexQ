@@ -35,7 +35,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tiswu.sagex.R
+import com.tiswu.sagex.domain.TimeRange
 import com.tiswu.sagex.service.AutostartHelper
+import com.tiswu.sagex.ui.components.TimeRangeSelector
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -111,21 +113,27 @@ fun HomeScreen(
                 onClick = { showClearDialog = true },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("清空所有数据")
+                Text("删除消息")
             }
         }
     }
 
     if (showClearDialog) {
+        var deleteRange by remember { mutableStateOf<TimeRange>(TimeRange.All) }
         AlertDialog(
             onDismissRequest = { showClearDialog = false },
-            title = { Text("清空所有数据") },
-            text = { Text("将永久删除所有已捕获的消息,无法恢复。确定继续?") },
+            title = { Text("删除消息") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("选择时间范围,将永久删除该范围内所有会话的消息,无法恢复。")
+                    TimeRangeSelector(selected = deleteRange, onSelected = { deleteRange = it })
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.clearAll()
+                    viewModel.deleteByRange(deleteRange)
                     showClearDialog = false
-                }) { Text("清空") }
+                }) { Text("删除") }
             },
             dismissButton = {
                 TextButton(onClick = { showClearDialog = false }) { Text("取消") }

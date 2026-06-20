@@ -107,6 +107,31 @@ class MessageDaoTest {
     }
 
     @Test
+    fun `deleteInRange removes only in-range messages`() = runTest {
+        val key = ConversationKey.of(pkg, ConversationType.DIRECT, "A")
+        dao.insert(message(ConversationType.DIRECT, "A", "A", "old", 100L))
+        dao.insert(message(ConversationType.DIRECT, "A", "A", "mid", 200L))
+        dao.insert(message(ConversationType.DIRECT, "A", "A", "new", 300L))
+
+        dao.deleteInRange(150L, 250L) // removes only "mid"
+
+        assertEquals(listOf("old", "new"), dao.byConversation(key).map { it.body })
+    }
+
+    @Test
+    fun `per-conversation deleteInRange leaves other conversations`() = runTest {
+        val groupKey = ConversationKey.of(pkg, ConversationType.GROUP, "群")
+        val directKey = ConversationKey.of(pkg, ConversationType.DIRECT, "李四")
+        dao.insert(message(ConversationType.GROUP, "群", "x", "g", 100L))
+        dao.insert(message(ConversationType.DIRECT, "李四", "李四", "d", 100L))
+
+        dao.deleteInRange(groupKey, 0L, Long.MAX_VALUE)
+
+        assertEquals(0, dao.byConversation(groupKey).size)
+        assertEquals(1, dao.byConversation(directKey).size)
+    }
+
+    @Test
     fun `group and direct with same title stay distinct`() = runTest {
         dao.insert(message(ConversationType.GROUP, "张三", "x", "group msg", 100L))
         dao.insert(message(ConversationType.DIRECT, "张三", "张三", "direct msg", 200L))

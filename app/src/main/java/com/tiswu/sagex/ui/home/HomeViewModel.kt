@@ -8,6 +8,7 @@ import com.tiswu.sagex.data.prefs.KeepAlivePreferences
 import com.tiswu.sagex.notification.NotificationAccessHelper
 import com.tiswu.sagex.service.AutostartHelper
 import com.tiswu.sagex.service.BatteryOptimizationHelper
+import com.tiswu.sagex.domain.TimeRange
 import com.tiswu.sagex.service.ServiceController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -81,7 +82,7 @@ class HomeViewModel @Inject constructor(
 
     fun resolveAutostart(): AutostartHelper.Result = autostartHelper.resolve()
 
-    fun clearAll() {
-        viewModelScope.launch { repository.clearAll() }
+    fun deleteByRange(range: TimeRange) {
+        viewModelScope.launch { repository.deleteByRange(range) }
     }
 }

@@ -4,6 +4,8 @@ import com.tiswu.sagex.data.local.MessageDao
 import com.tiswu.sagex.data.local.toDomain
 import com.tiswu.sagex.data.local.toEntity
 import com.tiswu.sagex.di.IoDispatcher
+import com.tiswu.sagex.domain.TimeRange
+import com.tiswu.sagex.domain.bounds
 import com.tiswu.sagex.domain.model.CapturedMessage
 import com.tiswu.sagex.domain.model.ConversationSummary
 import kotlinx.coroutines.CoroutineDispatcher
@@ -36,4 +38,19 @@ class MessageRepository @Inject constructor(
     suspend fun count(): Int = withContext(ioDispatcher) { dao.count() }
 
     suspend fun clearAll() = withContext(ioDispatcher) { dao.clearAll() }
+
+    suspend fun deleteByRange(range: TimeRange, now: Long = System.currentTimeMillis()) =
+        withContext(ioDispatcher) {
+            val (start, end) = range.bounds(now)
+            dao.deleteInRange(start, end)
+        }
+
+    suspend fun deleteByRange(
+        conversationKey: String,
+        range: TimeRange,
+        now: Long = System.currentTimeMillis(),
+    ) = withContext(ioDispatcher) {
+        val (start, end) = range.bounds(now)
+        dao.deleteInRange(conversationKey, start, end)
+    }
 }

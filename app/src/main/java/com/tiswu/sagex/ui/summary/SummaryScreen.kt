@@ -3,8 +3,6 @@ package com.tiswu.sagex.ui.summary
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -16,7 +14,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,9 +30,9 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.tiswu.sagex.ai.MessageRange
+import com.tiswu.sagex.ui.components.TimeRangeSelector
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SummaryScreen(
     onBack: () -> Unit,
@@ -66,15 +63,11 @@ fun SummaryScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text("时间范围", style = MaterialTheme.typography.titleSmall)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MessageRange.entries.forEach { range ->
-                    FilterChip(
-                        selected = state.range == range,
-                        onClick = { viewModel.setRange(range) },
-                        label = { Text(range.label) },
-                    )
-                }
-            }
+            TimeRangeSelector(
+                selected = state.range,
+                onSelected = viewModel::setRange,
+                modifier = Modifier.fillMaxWidth(),
+            )
 
             Button(
                 onClick = viewModel::generate,
