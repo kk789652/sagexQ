@@ -42,12 +42,14 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val config by viewModel.config.collectAsStateWithLifecycle()
+    val savedInstruction by viewModel.instructionHeader.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     var baseUrl by remember { mutableStateOf("") }
     var apiKey by remember { mutableStateOf("") }
     var model by remember { mutableStateOf("") }
+    var instruction by remember { mutableStateOf("") }
     var seeded by remember { mutableStateOf(false) }
 
     // Seed the fields once from the persisted config.
@@ -57,6 +59,14 @@ fun SettingsScreen(
             apiKey = config.apiKey
             model = config.model
             seeded = true
+        }
+    }
+    var instructionSeeded by remember { mutableStateOf(false) }
+    LaunchedEffect(savedInstruction) {
+        val loaded = savedInstruction
+        if (!instructionSeeded && loaded != null) {
+            instruction = loaded
+            instructionSeeded = true
         }
     }
 
@@ -110,9 +120,22 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            Text(
+                "分享/导出指令头",
+                style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+            )
+            OutlinedTextField(
+                value = instruction,
+                onValueChange = { instruction = it },
+                label = { Text("导出时附在开头的提示语") },
+                placeholder = { Text("请总结以下对话…") },
+                minLines = 2,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
             Button(
                 onClick = {
-                    viewModel.save(baseUrl, apiKey, model)
+                    viewModel.save(baseUrl, apiKey, model, instruction)
                     scope.launch { snackbarHostState.showSnackbar("已保存") }
                 },
                 modifier = Modifier.fillMaxWidth(),

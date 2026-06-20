@@ -3,8 +3,11 @@ package com.tiswu.sagex.ui.conversations
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tiswu.sagex.ai.TranscriptExporter
 import com.tiswu.sagex.data.MessageRepository
+import com.tiswu.sagex.data.prefs.ExportSettings
 import com.tiswu.sagex.domain.TimeRange
+import com.tiswu.sagex.domain.filterByRange
 import com.tiswu.sagex.domain.model.CapturedMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -16,6 +19,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ConversationDetailViewModel @Inject constructor(
     private val repository: MessageRepository,
+    private val exportSettings: ExportSettings,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -32,6 +36,20 @@ class ConversationDetailViewModel @Inject constructor(
 
     fun deleteByRange(range: TimeRange) {
         viewModelScope.launch { repository.deleteByRange(conversationKey, range) }
+    }
+
+    /** Builds the export text for [range]; invokes [onReady] with null when the range is empty. */
+    fun export(range: TimeRange, onReady: (String?) -> Unit) {
+        viewModelScope.launch {
+            val all = messages.value
+            val inRange = filterByRange(all, range, System.currentTimeMillis())
+            if (inRange.isEmpty()) {
+                onReady(null)
+                return@launch
+            }
+            val title = all.firstOrNull()?.conversationTitle ?: "会话"
+            onReady(TranscriptExporter.export(title, inRange, exportSettings.current()))
+        }
     }
 
     companion object {

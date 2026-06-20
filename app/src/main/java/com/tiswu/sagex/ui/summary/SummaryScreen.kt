@@ -26,11 +26,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tiswu.sagex.ui.components.TimeRangeSelector
+import com.tiswu.sagex.ui.util.shareText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,6 +43,7 @@ fun SummaryScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -113,6 +116,12 @@ fun SummaryScreen(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text("复制")
+                        }
+                        OutlinedButton(
+                            onClick = { shareText(context, status.text) },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("分享")
                         }
                     }
                 }

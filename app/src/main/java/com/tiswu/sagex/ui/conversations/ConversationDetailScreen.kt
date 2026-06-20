@@ -28,8 +28,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import android.widget.Toast
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -40,6 +42,7 @@ import com.tiswu.sagex.domain.model.CapturedMessage
 import com.tiswu.sagex.domain.model.ConversationType
 import com.tiswu.sagex.ui.components.TimeRangeSelector
 import com.tiswu.sagex.ui.util.relativeTime
+import com.tiswu.sagex.ui.util.shareText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,8 +53,10 @@ fun ConversationDetailScreen(
 ) {
     val messages by viewModel.messages.collectAsStateWithLifecycle()
     val title = messages.firstOrNull()?.conversationTitle ?: "会话"
+    val context = LocalContext.current
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showExportDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -70,6 +75,13 @@ fun ConversationDetailScreen(
                         Icon(Icons.Default.MoreVert, contentDescription = "更多")
                     }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text("导出/分享") },
+                            onClick = {
+                                showMenu = false
+                                showExportDialog = true
+                            },
+                        )
                         DropdownMenuItem(
                             text = { Text("删除本会话") },
                             onClick = {
@@ -117,6 +129,35 @@ fun ConversationDetailScreen(
                 }
             }
         }
+    }
+
+    if (showExportDialog) {
+        var exportRange by remember { mutableStateOf<TimeRange>(TimeRange.All) }
+        AlertDialog(
+            onDismissRequest = { showExportDialog = false },
+            title = { Text("导出 / 分享") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("选择时间范围,将「$title」该范围内的聊天导出为文本,通过系统分享发给 ChatGPT 等 App。")
+                    TimeRangeSelector(selected = exportRange, onSelected = { exportRange = it })
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.export(exportRange) { text ->
+                        if (text == null) {
+                            Toast.makeText(context, "该时间范围内没有可导出的消息", Toast.LENGTH_SHORT).show()
+                        } else {
+                            shareText(context, text)
+                        }
+                    }
+                    showExportDialog = false
+                }) { Text("分享") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExportDialog = false }) { Text("取消") }
+            },
+        )
     }
 
     if (showDeleteDialog) {
