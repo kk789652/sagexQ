@@ -28,6 +28,19 @@ interface MessageDao {
 
     @Query(
         """
+        SELECT sourcePackage AS sourcePackage,
+               COUNT(DISTINCT conversationKey) AS conversationCount,
+               COUNT(*) AS messageCount,
+               MAX(postedAt) AS lastPostedAt
+        FROM messages
+        GROUP BY sourcePackage
+        ORDER BY lastPostedAt DESC
+        """,
+    )
+    fun observeApps(): Flow<List<AppSummaryRow>>
+
+    @Query(
+        """
         SELECT m.conversationKey AS conversationKey,
                m.conversationTitle AS conversationTitle,
                m.conversationType AS conversationType,
@@ -43,6 +56,29 @@ interface MessageDao {
         """,
     )
     fun observeConversations(): Flow<List<ConversationSummaryRow>>
+
+    @Query(
+        """
+        SELECT m.conversationKey AS conversationKey,
+               m.conversationTitle AS conversationTitle,
+               m.conversationType AS conversationType,
+               COUNT(*) AS messageCount,
+               MAX(m.postedAt) AS lastPostedAt,
+               (SELECT body FROM messages x
+                   WHERE x.sourcePackage = :sourcePackage
+                     AND x.conversationKey = m.conversationKey
+                   ORDER BY x.postedAt DESC, x.id DESC LIMIT 1) AS lastMessage,
+               (SELECT sender FROM messages x
+                   WHERE x.sourcePackage = :sourcePackage
+                     AND x.conversationKey = m.conversationKey
+                   ORDER BY x.postedAt DESC, x.id DESC LIMIT 1) AS lastSender
+        FROM messages m
+        WHERE m.sourcePackage = :sourcePackage
+        GROUP BY m.conversationKey
+        ORDER BY lastPostedAt DESC
+        """,
+    )
+    fun observeConversations(sourcePackage: String): Flow<List<ConversationSummaryRow>>
 
     @Query("DELETE FROM messages")
     suspend fun clearAll()

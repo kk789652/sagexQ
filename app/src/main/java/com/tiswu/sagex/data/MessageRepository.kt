@@ -6,10 +6,12 @@ import com.tiswu.sagex.data.local.toEntity
 import com.tiswu.sagex.di.IoDispatcher
 import com.tiswu.sagex.domain.TimeRange
 import com.tiswu.sagex.domain.bounds
+import com.tiswu.sagex.domain.model.AppSummary
 import com.tiswu.sagex.domain.model.CapturedMessage
 import com.tiswu.sagex.domain.model.ConversationSummary
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -25,11 +27,25 @@ class MessageRepository @Inject constructor(
 
     val lastPostedAt: Flow<Long?> = dao.observeLastPostedAt()
 
+    val apps: Flow<List<AppSummary>> =
+        dao.observeApps()
+            .map { rows -> rows.map { it.toDomain() } }
+            .flowOn(ioDispatcher)
+
     val conversations: Flow<List<ConversationSummary>> =
-        dao.observeConversations().map { rows -> rows.map { it.toDomain() } }
+        dao.observeConversations()
+            .map { rows -> rows.map { it.toDomain() } }
+            .flowOn(ioDispatcher)
+
+    fun conversations(sourcePackage: String): Flow<List<ConversationSummary>> =
+        dao.observeConversations(sourcePackage)
+            .map { rows -> rows.map { it.toDomain() } }
+            .flowOn(ioDispatcher)
 
     fun messages(conversationKey: String): Flow<List<CapturedMessage>> =
-        dao.observeByConversation(conversationKey).map { list -> list.map { it.toDomain() } }
+        dao.observeByConversation(conversationKey)
+            .map { list -> list.map { it.toDomain() } }
+            .flowOn(ioDispatcher)
 
     suspend fun save(message: CapturedMessage): Long = withContext(ioDispatcher) {
         dao.insert(message.toEntity())

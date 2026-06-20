@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Badge
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -48,7 +47,7 @@ fun ConversationListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("会话") },
+                title = { Text(viewModel.appName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
@@ -137,14 +136,6 @@ private fun ConversationRow(conversation: ConversationSummary, onClick: () -> Un
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            if (conversation.messageCount > 0) {
-                Badge(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError,
-                ) {
-                    Text(text = if (conversation.messageCount > 99) "99+" else "${conversation.messageCount}")
-                }
-            }
         }
     }
     HorizontalDivider(

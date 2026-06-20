@@ -44,9 +44,10 @@ class MessageDaoTest {
         sender: String?,
         body: String,
         postedAt: Long,
+        sourcePackage: String = pkg,
     ) = CapturedMessage(
-        sourcePackage = pkg,
-        conversationKey = ConversationKey.of(pkg, type, title),
+        sourcePackage = sourcePackage,
+        conversationKey = ConversationKey.of(sourcePackage, type, title),
         conversationType = type,
         conversationTitle = title,
         sender = sender,
@@ -149,5 +150,64 @@ class MessageDaoTest {
 
         val conversations = dao.observeConversations().first()
         assertEquals(2, conversations.size)
+    }
+
+    @Test
+    fun `apps aggregate groups by source package`() = runTest {
+        val otherPkg = "com.example.chat"
+        dao.insert(message(ConversationType.GROUP, "群A", "a", "1", 100L))
+        dao.insert(message(ConversationType.GROUP, "群A", "b", "2", 300L))
+        dao.insert(message(ConversationType.DIRECT, "李四", "李四", "hi", 200L))
+        dao.insert(
+            message(
+                ConversationType.DIRECT,
+                "Other",
+                "Other",
+                "other",
+                400L,
+                sourcePackage = otherPkg,
+            ),
+        )
+
+        val apps = dao.observeApps().first()
+        assertEquals(2, apps.size)
+
+        val other = apps.first()
+        assertEquals(otherPkg, other.sourcePackage)
+        assertEquals(1, other.conversationCount)
+        assertEquals(1, other.messageCount)
+        assertEquals(400L, other.lastPostedAt)
+
+        val wechat = apps[1]
+        assertEquals(pkg, wechat.sourcePackage)
+        assertEquals(2, wechat.conversationCount)
+        assertEquals(3, wechat.messageCount)
+        assertEquals(300L, wechat.lastPostedAt)
+    }
+
+    @Test
+    fun `scoped conversations include only requested source package`() = runTest {
+        val otherPkg = "com.example.chat"
+        dao.insert(message(ConversationType.DIRECT, "A", "A", "wechat", 100L))
+        dao.insert(message(ConversationType.GROUP, "群", "B", "wechat group", 200L))
+        dao.insert(
+            message(
+                ConversationType.DIRECT,
+                "A",
+                "A",
+                "other",
+                300L,
+                sourcePackage = otherPkg,
+            ),
+        )
+
+        val conversations = dao.observeConversations(pkg).first()
+        assertEquals(2, conversations.size)
+        assertEquals(listOf("群", "A"), conversations.map { it.conversationTitle })
+        assertEquals(listOf("wechat group", "wechat"), conversations.map { it.lastMessage })
+
+        val otherConversations = dao.observeConversations(otherPkg).first()
+        assertEquals(1, otherConversations.size)
+        assertEquals("other", otherConversations.single().lastMessage)
     }
 }
