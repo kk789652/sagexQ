@@ -3,6 +3,8 @@ package com.tiswu.sagex.notification
 import android.app.Notification
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import android.util.Log
+import com.tiswu.sagex.BuildConfig
 import com.tiswu.sagex.data.MessageRepository
 import com.tiswu.sagex.domain.NotificationParser
 import com.tiswu.sagex.domain.ParseResult
@@ -34,6 +36,9 @@ class SageXNotificationListenerService : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         val raw = sbn?.toRawNotification() ?: return
+        if (BuildConfig.DEBUG && raw.sourcePackage == "com.tencent.mm") {
+            logWeChatNotification(sbn, raw)
+        }
         val parser = parsers.firstOrNull { it.supports(raw.sourcePackage) } ?: return
         when (val result = parser.parse(raw)) {
             is ParseResult.Parsed -> scope.launch { repository.save(result.message) }
@@ -45,6 +50,20 @@ class SageXNotificationListenerService : NotificationListenerService() {
     override fun onDestroy() {
         scope.cancel()
         super.onDestroy()
+    }
+
+    /** Debug-only: dump the raw WeChat notification fields so any device/version format can be confirmed. */
+    private fun logWeChatNotification(sbn: StatusBarNotification, raw: RawNotification) {
+        val extras = sbn.notification?.extras
+        val lines = extras?.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)
+            ?.joinToString(" | ") { it.toString() }
+        val hasMessages = extras?.containsKey(Notification.EXTRA_MESSAGES) == true
+        val subText = extras?.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()
+        Log.d(
+            TAG,
+            "WeChat notif: title=[${raw.title}] text=[${raw.text}] subText=[$subText] " +
+                "lines=[$lines] hasMessages=$hasMessages ticker=[${raw.tickerText}]",
+        )
     }
 
     private fun StatusBarNotification.toRawNotification(): RawNotification? {
@@ -59,5 +78,9 @@ class SageXNotificationListenerService : NotificationListenerService() {
             tickerText = notification?.tickerText?.toString(),
             postedAt = postTime,
         )
+    }
+
+    private companion object {
+        const val TAG = "SageXCapture"
     }
 }

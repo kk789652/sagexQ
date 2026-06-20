@@ -72,9 +72,51 @@ class WeChatNotificationParserTest {
     }
 
     @Test
-    fun `aggregated bracketed chinese notification is content unavailable`() {
+    fun `count-prefixed group message is parsed`() {
+        val result = parser.parse(raw(title = "开发群", text = "[3条]张三: 你好"))
+        result as ParseResult.Parsed
+        assertEquals(ConversationType.GROUP, result.message.conversationType)
+        assertEquals("开发群", result.message.conversationTitle)
+        assertEquals("张三", result.message.sender)
+        assertEquals("你好", result.message.body)
+    }
+
+    @Test
+    fun `count-prefixed direct message is parsed`() {
+        val result = parser.parse(raw(title = "李四", text = "[2条]在吗"))
+        result as ParseResult.Parsed
+        assertEquals(ConversationType.DIRECT, result.message.conversationType)
+        assertEquals("李四", result.message.sender)
+        assertEquals("在吗", result.message.body)
+    }
+
+    @Test
+    fun `fullwidth bracket count prefix is stripped`() {
+        val result = parser.parse(raw(title = "产品群", text = "【5条】王五: 看一下"))
+        result as ParseResult.Parsed
+        assertEquals(ConversationType.GROUP, result.message.conversationType)
+        assertEquals("王五", result.message.sender)
+        assertEquals("看一下", result.message.body)
+    }
+
+    @Test
+    fun `pure summary count remains content unavailable`() {
+        assertTrue(parser.parse(raw(title = "微信", text = "5条消息来自3个聊天")) is ParseResult.ContentUnavailable)
+        assertTrue(parser.parse(raw(title = "微信", text = "2条新消息")) is ParseResult.ContentUnavailable)
+    }
+
+    @Test
+    fun `bracketed multi-chat summary stays content unavailable`() {
         val result = parser.parse(raw(title = "微信", text = "[3条]来自2个聊天"))
         assertTrue(result is ParseResult.ContentUnavailable)
+    }
+
+    @Test
+    fun `bare number-leading content is not treated as a count prefix`() {
+        val result = parser.parse(raw(title = "李四", text = "3条建议给你"))
+        result as ParseResult.Parsed
+        assertEquals(ConversationType.DIRECT, result.message.conversationType)
+        assertEquals("3条建议给你", result.message.body)
     }
 
     @Test
