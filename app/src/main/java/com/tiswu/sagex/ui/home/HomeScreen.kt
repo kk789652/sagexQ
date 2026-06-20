@@ -41,6 +41,7 @@ import com.tiswu.sagex.service.AutostartHelper
 @Composable
 fun HomeScreen(
     onOpenConversations: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -72,6 +73,13 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("查看会话")
+            }
+
+            OutlinedButton(
+                onClick = onOpenSettings,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("API 设置")
             }
 
             if (!state.accessGranted) {
