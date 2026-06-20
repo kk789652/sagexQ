@@ -10,12 +10,14 @@ import com.tiswu.sagex.data.prefs.ApiSettings
 import com.tiswu.sagex.data.prefs.PromptSettings
 import com.tiswu.sagex.domain.TimeRange
 import com.tiswu.sagex.domain.filterByRange
+import com.tiswu.sagex.domain.model.CapturedMessage
 import com.tiswu.sagex.ui.conversations.ConversationDetailViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -31,8 +33,15 @@ sealed interface SummaryStatus {
 
 data class SummaryUiState(
     val range: TimeRange = TimeRange.All,
+    val candidates: List<CapturedMessage> = emptyList(),
+    val selectedIds: Set<Long> = emptySet(),
     val status: SummaryStatus = SummaryStatus.Idle,
 )
+
+internal fun selectMessages(
+    candidates: List<CapturedMessage>,
+    selectedIds: Set<Long>,
+): List<CapturedMessage> = candidates.filter { it.id in selectedIds }
 
 @HiltViewModel
 class SummaryViewModel @Inject constructor(
@@ -46,47 +55,84 @@ class SummaryViewModel @Inject constructor(
     private val conversationKey: String =
         checkNotNull(savedStateHandle[ConversationDetailViewModel.ARG_CONVERSATION_KEY])
 
-    private val _state = MutableStateFlow(SummaryUiState())
-    val state: StateFlow<SummaryUiState> = _state.asStateFlow()
+    private val messages: StateFlow<List<CapturedMessage>> =
+        repository.messages(conversationKey)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val range = MutableStateFlow<TimeRange>(TimeRange.All)
+
+    val candidates: StateFlow<List<CapturedMessage>> =
+        combine(messages, range) { messages, range ->
+            filterByRange(messages, range, System.currentTimeMillis())
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val selectedIds = MutableStateFlow<Set<Long>>(emptySet())
+    private val status = MutableStateFlow<SummaryStatus>(SummaryStatus.Idle)
+
+    val uiState: StateFlow<SummaryUiState> =
+        combine(range, candidates, selectedIds, status) { range, candidates, selectedIds, status ->
+            SummaryUiState(
+                range = range,
+                candidates = candidates,
+                selectedIds = selectedIds,
+                status = status,
+            )
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SummaryUiState())
+
+    init {
+        viewModelScope.launch {
+            candidates.collect { messages ->
+                selectedIds.value = messages.map { it.id }.toSet()
+            }
+        }
+    }
 
     fun setRange(range: TimeRange) {
-        _state.update { it.copy(range = range) }
+        this.range.value = range
+    }
+
+    fun toggle(id: Long) {
+        selectedIds.update { ids ->
+            if (id in ids) ids - id else ids + id
+        }
+    }
+
+    fun selectAll() {
+        selectedIds.value = candidates.value.map { it.id }.toSet()
+    }
+
+    fun clearAll() {
+        selectedIds.value = emptySet()
     }
 
     fun generate() {
         viewModelScope.launch {
             val config = apiSettings.current()
             if (!config.isConfigured) {
-                _state.update { it.copy(status = SummaryStatus.NotConfigured) }
+                status.value = SummaryStatus.NotConfigured
                 return@launch
             }
-            val messages = repository.messages(conversationKey).first()
-            val inRange = filterByRange(messages, _state.value.range, System.currentTimeMillis())
-            if (inRange.isEmpty()) {
-                _state.update { it.copy(status = SummaryStatus.Empty) }
+            val selected = selectMessages(candidates.value, selectedIds.value)
+            if (selected.isEmpty()) {
+                status.value = SummaryStatus.Empty
                 return@launch
             }
-            val title = inRange.firstOrNull()?.conversationTitle ?: "会话"
-            val sourcePackage = inRange.firstOrNull()?.sourcePackage.orEmpty()
+            val title = selected.first().conversationTitle
+            val sourcePackage = selected.first().sourcePackage
             val systemPrompt = promptSettings.currentPrompt(sourcePackage)
-                .takeIf { it.isNotBlank() }
-                ?: PromptSettings.DEFAULT_PROMPT
+                .ifBlank { PromptSettings.DEFAULT_PROMPT }
             val prompt = SummaryPromptBuilder.build(
                 conversationTitle = title,
-                messages = inRange,
+                messages = selected,
                 systemPrompt = systemPrompt,
             )
 
-            _state.update { it.copy(status = SummaryStatus.Loading) }
+            status.value = SummaryStatus.Loading
             val result = client.summarize(config, prompt)
-            _state.update {
-                it.copy(
-                    status = result.fold(
-                        onSuccess = { text -> SummaryStatus.Success(text) },
-                        onFailure = { e -> SummaryStatus.Error(e.message ?: "未知错误") },
-                    ),
-                )
-            }
+            status.value = result.fold(
+                onSuccess = { text -> SummaryStatus.Success(text) },
+                onFailure = { e -> SummaryStatus.Error(e.message ?: "未知错误") },
+            )
         }
     }
 }
