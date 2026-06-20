@@ -41,8 +41,10 @@ Workflow per change: `proposal.md → design.md → specs/ → tasks.md` → imp
 
 ### Roadmap (changes)
 
-1. `add-notification-capture` — NLS + parse + Room storage + permission/status UI. *(in progress)*
-2. `add-background-resilience` — foreground service, boot receiver, battery/autostart whitelist.
-3. `add-conversation-list` — group/person conversation list + detail.
-4. `add-ai-summary` — OpenAI-compatible client + settings + manual summarize.
-5. `design-extensions` (design only) — system-share export, multi-app sources.
+1. `add-notification-capture` — NLS + parse + Room storage + permission/status UI. ✅ done
+2. `add-background-resilience` — foreground service (specialUse), boot receiver, battery/autostart whitelist. ✅ done
+3. `add-conversation-list` — group/person conversation list + detail + navigation. ✅ done
+4. `add-ai-summary` — OpenAI-compatible client + settings + manual summarize. ✅ done
+5. `design-extensions` (design only) — system-share export, multi-app sources. ✅ designed (impl deferred)
+
+Future (scoped in `design-extensions`): `add-summary-sharing`, `add-source-<app>`.
