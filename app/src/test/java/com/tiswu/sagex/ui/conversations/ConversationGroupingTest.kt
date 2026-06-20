@@ -14,6 +14,8 @@ class ConversationGroupingTest {
         conversationType = type,
         messageCount = 1,
         lastPostedAt = last,
+        lastMessage = "msg",
+        lastSender = "s",
     )
 
     @Test

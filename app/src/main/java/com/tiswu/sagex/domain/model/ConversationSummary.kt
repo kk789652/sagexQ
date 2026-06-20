@@ -7,4 +7,6 @@ data class ConversationSummary(
     val conversationType: ConversationType,
     val messageCount: Int,
     val lastPostedAt: Long,
+    val lastMessage: String,
+    val lastSender: String?,
 )

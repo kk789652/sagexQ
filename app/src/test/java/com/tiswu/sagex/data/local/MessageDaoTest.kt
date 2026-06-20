@@ -132,6 +132,17 @@ class MessageDaoTest {
     }
 
     @Test
+    fun `conversations expose the latest message body and sender`() = runTest {
+        dao.insert(message(ConversationType.GROUP, "群A", "甲", "早", 100L))
+        dao.insert(message(ConversationType.GROUP, "群A", "乙", "最新一条", 300L))
+        dao.insert(message(ConversationType.GROUP, "群A", "丙", "中间", 200L))
+
+        val summary = dao.observeConversations().first().single()
+        assertEquals("最新一条", summary.lastMessage)
+        assertEquals("乙", summary.lastSender)
+    }
+
+    @Test
     fun `group and direct with same title stay distinct`() = runTest {
         dao.insert(message(ConversationType.GROUP, "张三", "x", "group msg", 100L))
         dao.insert(message(ConversationType.DIRECT, "张三", "张三", "direct msg", 200L))

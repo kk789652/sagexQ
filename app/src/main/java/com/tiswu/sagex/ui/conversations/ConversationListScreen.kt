@@ -1,9 +1,11 @@
 package com.tiswu.sagex.ui.conversations
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -11,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Badge
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -24,11 +27,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tiswu.sagex.domain.model.ConversationSummary
 import com.tiswu.sagex.domain.model.ConversationType
+import com.tiswu.sagex.ui.components.Avatar
 import com.tiswu.sagex.ui.util.relativeTime
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -51,6 +56,7 @@ fun ConversationListScreen(
                 },
             )
         },
+        containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         if (sections.isEmpty()) {
             Box(
@@ -76,7 +82,6 @@ fun ConversationListScreen(
                             conversation = conversation,
                             onClick = { onOpenConversation(conversation.conversationKey) },
                         )
-                        HorizontalDivider()
                     }
                 }
             }
@@ -88,32 +93,74 @@ fun ConversationListScreen(
 private fun SectionHeader(label: String) {
     Text(
         text = label,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
     )
 }
 
 @Composable
 private fun ConversationRow(conversation: ConversationSummary, onClick: () -> Unit) {
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(
-            text = conversation.conversationTitle,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Medium,
-        )
-        Text(
-            text = "${conversation.messageCount} 条 · ${relativeTime(conversation.lastPostedAt)}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Avatar(name = conversation.conversationTitle)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = conversation.conversationTitle,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = preview(conversation),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Column(
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = relativeTime(conversation.lastPostedAt),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (conversation.messageCount > 0) {
+                Badge(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError,
+                ) {
+                    Text(text = if (conversation.messageCount > 99) "99+" else "${conversation.messageCount}")
+                }
+            }
+        }
+    }
+    HorizontalDivider(
+        modifier = Modifier.padding(start = 68.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+    )
+}
+
+/** Group preview shows "sender: body"; direct shows the body. */
+private fun preview(conversation: ConversationSummary): String {
+    val body = conversation.lastMessage
+    val sender = conversation.lastSender
+    return if (conversation.conversationType == ConversationType.GROUP && !sender.isNullOrBlank()) {
+        "$sender: $body"
+    } else {
+        body
     }
 }
 

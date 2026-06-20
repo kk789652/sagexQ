@@ -28,13 +28,17 @@ interface MessageDao {
 
     @Query(
         """
-        SELECT conversationKey AS conversationKey,
-               conversationTitle AS conversationTitle,
-               conversationType AS conversationType,
+        SELECT m.conversationKey AS conversationKey,
+               m.conversationTitle AS conversationTitle,
+               m.conversationType AS conversationType,
                COUNT(*) AS messageCount,
-               MAX(postedAt) AS lastPostedAt
-        FROM messages
-        GROUP BY conversationKey
+               MAX(m.postedAt) AS lastPostedAt,
+               (SELECT body FROM messages x WHERE x.conversationKey = m.conversationKey
+                   ORDER BY x.postedAt DESC, x.id DESC LIMIT 1) AS lastMessage,
+               (SELECT sender FROM messages x WHERE x.conversationKey = m.conversationKey
+                   ORDER BY x.postedAt DESC, x.id DESC LIMIT 1) AS lastSender
+        FROM messages m
+        GROUP BY m.conversationKey
         ORDER BY lastPostedAt DESC
         """,
     )

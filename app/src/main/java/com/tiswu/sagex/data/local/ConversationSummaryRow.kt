@@ -10,6 +10,8 @@ data class ConversationSummaryRow(
     val conversationType: String,
     val messageCount: Int,
     val lastPostedAt: Long,
+    val lastMessage: String?,
+    val lastSender: String?,
 )
 
 fun ConversationSummaryRow.toDomain(): ConversationSummary = ConversationSummary(
@@ -19,4 +21,6 @@ fun ConversationSummaryRow.toDomain(): ConversationSummary = ConversationSummary
         .getOrDefault(ConversationType.UNKNOWN),
     messageCount = messageCount,
     lastPostedAt = lastPostedAt,
+    lastMessage = lastMessage.orEmpty(),
+    lastSender = lastSender,
 )

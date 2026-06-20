@@ -1,13 +1,16 @@
 package com.tiswu.sagex.ui.conversations
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -31,6 +34,7 @@ import androidx.compose.runtime.setValue
 import android.widget.Toast
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -40,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tiswu.sagex.domain.TimeRange
 import com.tiswu.sagex.domain.model.CapturedMessage
 import com.tiswu.sagex.domain.model.ConversationType
+import com.tiswu.sagex.ui.components.Avatar
 import com.tiswu.sagex.ui.components.TimeRangeSelector
 import com.tiswu.sagex.ui.util.relativeTime
 import com.tiswu.sagex.ui.util.shareText
@@ -93,6 +98,7 @@ fun ConversationDetailScreen(
                 },
             )
         },
+        containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         if (messages.isEmpty()) {
             Box(
@@ -186,23 +192,37 @@ fun ConversationDetailScreen(
 
 @Composable
 private fun MessageItem(message: CapturedMessage, showSender: Boolean) {
-    Column(
+    val avatarName = message.sender?.takeIf { it.isNotBlank() } ?: message.conversationTitle
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (showSender && !message.sender.isNullOrBlank()) {
+        Avatar(name = avatarName)
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            if (showSender && !message.sender.isNullOrBlank()) {
+                Text(
+                    text = message.sender,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    text = message.body,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
             Text(
-                text = message.sender,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Medium,
+                text = relativeTime(message.postedAt),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Text(text = message.body, style = MaterialTheme.typography.bodyLarge)
-        Text(
-            text = relativeTime(message.postedAt),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
