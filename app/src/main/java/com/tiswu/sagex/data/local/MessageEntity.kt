@@ -1,5 +1,6 @@
 package com.tiswu.sagex.data.local
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -19,6 +20,7 @@ data class MessageEntity(
     val sender: String?,
     val body: String,
     val postedAt: Long,
+    @ColumnInfo(name = "feishu_synced") val feishuSynced: Boolean = false,
 )
 
 fun CapturedMessage.toEntity(): MessageEntity = MessageEntity(

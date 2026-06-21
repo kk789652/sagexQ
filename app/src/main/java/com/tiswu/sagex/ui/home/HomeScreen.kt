@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -64,6 +65,7 @@ fun HomeScreen(
     onOpenSettings: () -> Unit = {},
     onOpenPromptConfig: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
+    onSyncFeishu: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -96,6 +98,12 @@ fun HomeScreen(
                 onDeleteMessages = {
                     scope.launch { drawerState.close() }
                     showClearDialog = true
+                },
+                syncStatus = state.feishuSyncStatus,
+                onSyncFeishu = {
+                    scope.launch { drawerState.close() }
+                    onSyncFeishu()
+                    viewModel.syncToFeishu()
                 },
                 onOpenAbout = {
                     scope.launch { drawerState.close() }
@@ -173,6 +181,8 @@ private fun HomeDrawer(
     onOpenSettings: () -> Unit,
     onOpenPromptConfig: () -> Unit,
     onDeleteMessages: () -> Unit,
+    syncStatus: FeishuSyncStatus,
+    onSyncFeishu: () -> Unit,
     onOpenAbout: () -> Unit,
 ) {
     ModalDrawerSheet {
@@ -208,6 +218,21 @@ private fun HomeDrawer(
             selected = false,
             onClick = onDeleteMessages,
             icon = { Icon(Icons.Default.Delete, contentDescription = null) },
+            modifier = Modifier.padding(horizontal = 12.dp),
+        )
+        NavigationDrawerItem(
+            label = {
+                Text(
+                    when (syncStatus) {
+                        FeishuSyncStatus.Idle -> "同步到飞书"
+                        FeishuSyncStatus.Syncing -> "同步中…"
+                        is FeishuSyncStatus.Done -> "已同步 ${syncStatus.count} 条"
+                    },
+                )
+            },
+            selected = false,
+            onClick = onSyncFeishu,
+            icon = { Icon(Icons.Default.Sync, contentDescription = null) },
             modifier = Modifier.padding(horizontal = 12.dp),
         )
         NavigationDrawerItem(

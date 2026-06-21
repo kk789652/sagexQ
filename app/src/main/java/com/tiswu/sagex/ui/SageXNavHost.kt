@@ -46,6 +46,7 @@ fun SageXNavHost(navController: NavHostController = rememberNavController()) {
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 onOpenPromptConfig = { navController.navigate(Routes.PROMPT_CONFIG) },
                 onOpenAbout = { navController.navigate(Routes.ABOUT) },
+                onSyncFeishu = { },
             )
         }
         composable(

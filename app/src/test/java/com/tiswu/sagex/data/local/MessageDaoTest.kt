@@ -104,6 +104,18 @@ class MessageDaoTest {
     }
 
     @Test
+    fun `unsyncedMessages returns only unsynced rows`() = runTest {
+        val syncedId = dao.insert(message(ConversationType.DIRECT, "李四", "李四", "synced", 100L))
+        dao.insert(message(ConversationType.DIRECT, "王五", "王五", "unsynced", 200L))
+
+        dao.markSynced(syncedId)
+
+        val unsynced = dao.unsyncedMessages()
+        assertEquals(1, unsynced.size)
+        assertEquals("unsynced", unsynced.single().body)
+    }
+
+    @Test
     fun `count reflects inserts`() = runTest {
         dao.insert(message(ConversationType.DIRECT, "A", "A", "1", 1L))
         dao.insert(message(ConversationType.DIRECT, "B", "B", "2", 2L))

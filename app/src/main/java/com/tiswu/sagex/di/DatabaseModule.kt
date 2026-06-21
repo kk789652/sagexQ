@@ -18,7 +18,9 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): SageXDatabase =
-        Room.databaseBuilder(context, SageXDatabase::class.java, SageXDatabase.NAME).build()
+        Room.databaseBuilder(context, SageXDatabase::class.java, SageXDatabase.NAME)
+            .addMigrations(SageXDatabase.MIGRATION_1_2)
+            .build()
 
     @Provides
     fun provideMessageDao(database: SageXDatabase): MessageDao = database.messageDao()

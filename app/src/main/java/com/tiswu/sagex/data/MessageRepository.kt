@@ -59,9 +59,23 @@ class MessageRepository @Inject constructor(
         val id = dao.insert(entity)
         applicationScope.launch {
             runCatching { feishuSync.syncMessage(entity.copy(id = id).toDomain()) }
+                .onSuccess { dao.markSynced(id) }
                 .onFailure { Log.w(TAG, "Failed to sync message to Feishu", it) }
         }
         id
+    }
+
+    suspend fun syncUnsynced(): Int = withContext(ioDispatcher) {
+        var count = 0
+        dao.unsyncedMessages().forEach { entity ->
+            runCatching { feishuSync.syncMessage(entity.toDomain()) }
+                .onSuccess {
+                    dao.markSynced(entity.id)
+                    count++
+                }
+                .onFailure { Log.w(TAG, "Manual Feishu sync failed for message ${entity.id}", it) }
+        }
+        count
     }
 
     suspend fun count(): Int = withContext(ioDispatcher) { dao.count() }

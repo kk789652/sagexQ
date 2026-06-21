@@ -26,6 +26,12 @@ interface MessageDao {
     @Query("SELECT * FROM messages WHERE conversationKey = :conversationKey ORDER BY postedAt ASC")
     suspend fun byConversation(conversationKey: String): List<MessageEntity>
 
+    @Query("UPDATE messages SET feishu_synced = 1 WHERE id = :id")
+    suspend fun markSynced(id: Long)
+
+    @Query("SELECT * FROM messages WHERE feishu_synced = 0 ORDER BY postedAt ASC")
+    suspend fun unsyncedMessages(): List<MessageEntity>
+
     @Query(
         """
         SELECT sourcePackage AS sourcePackage,
