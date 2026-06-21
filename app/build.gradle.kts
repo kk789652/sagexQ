@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,10 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+}
+
+val localProps = Properties().also { props ->
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { props.load(it) }
 }
 
 android {
@@ -20,6 +26,11 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
+
+        buildConfigField("String", "FEISHU_APP_ID",      "\"${localProps["FEISHU_APP_ID"] ?: ""}\"")
+        buildConfigField("String", "FEISHU_APP_SECRET",  "\"${localProps["FEISHU_APP_SECRET"] ?: ""}\"")
+        buildConfigField("String", "FEISHU_APP_TOKEN",   "\"${localProps["FEISHU_APP_TOKEN"] ?: ""}\"")
+        buildConfigField("String", "FEISHU_MESSAGES_TABLE_ID", "\"${localProps["FEISHU_MESSAGES_TABLE_ID"] ?: ""}\"")
     }
 
     buildTypes {

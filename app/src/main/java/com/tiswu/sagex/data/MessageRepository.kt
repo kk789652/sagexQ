@@ -1,18 +1,23 @@
 package com.tiswu.sagex.data
 
+import android.util.Log
 import com.tiswu.sagex.data.local.MessageDao
 import com.tiswu.sagex.data.local.toDomain
 import com.tiswu.sagex.data.local.toEntity
+import com.tiswu.sagex.data.sync.FeishuSyncClient
+import com.tiswu.sagex.di.ApplicationScope
 import com.tiswu.sagex.di.IoDispatcher
 import com.tiswu.sagex.domain.TimeRange
 import com.tiswu.sagex.domain.bounds
 import com.tiswu.sagex.domain.model.AppSummary
 import com.tiswu.sagex.domain.model.CapturedMessage
 import com.tiswu.sagex.domain.model.ConversationSummary
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -20,6 +25,8 @@ import javax.inject.Singleton
 @Singleton
 class MessageRepository @Inject constructor(
     private val dao: MessageDao,
+    private val feishuSync: FeishuSyncClient,
+    @ApplicationScope private val applicationScope: CoroutineScope,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) {
 
@@ -48,7 +55,13 @@ class MessageRepository @Inject constructor(
             .flowOn(ioDispatcher)
 
     suspend fun save(message: CapturedMessage): Long = withContext(ioDispatcher) {
-        dao.insert(message.toEntity())
+        val entity = message.toEntity()
+        val id = dao.insert(entity)
+        applicationScope.launch {
+            runCatching { feishuSync.syncMessage(entity.copy(id = id).toDomain()) }
+                .onFailure { Log.w(TAG, "Failed to sync message to Feishu", it) }
+        }
+        id
     }
 
     suspend fun count(): Int = withContext(ioDispatcher) { dao.count() }
@@ -76,5 +89,9 @@ class MessageRepository @Inject constructor(
     ) = withContext(ioDispatcher) {
         val (start, end) = range.bounds(now)
         dao.deleteInRange(conversationKey, start, end)
+    }
+
+    private companion object {
+        const val TAG = "MessageRepository"
     }
 }
