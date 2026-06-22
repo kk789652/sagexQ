@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.yield
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -67,13 +68,15 @@ class MessageRepository @Inject constructor(
 
     suspend fun syncUnsynced(): Int = withContext(ioDispatcher) {
         var count = 0
-        dao.unsyncedMessages().forEach { entity ->
-            runCatching { feishuSync.syncMessage(entity.toDomain()) }
+        dao.unsyncedMessages().chunked(SYNC_BATCH_SIZE).forEach { chunk ->
+            runCatching { feishuSync.syncMessages(chunk.map { it.toDomain() }) }
                 .onSuccess {
-                    dao.markSynced(entity.id)
-                    count++
+                    dao.markSyncedAll(chunk.map { it.id })
+                    count += chunk.size
                 }
-                .onFailure { Log.w(TAG, "Manual Feishu sync failed for message ${entity.id}", it) }
+                .onFailure { Log.w(TAG, "Manual Feishu batch sync failed (${chunk.size} messages)", it) }
+            // Relieve the IO/Room writer between batches so concurrent capture inserts get through.
+            yield()
         }
         count
     }
@@ -107,5 +110,7 @@ class MessageRepository @Inject constructor(
 
     private companion object {
         const val TAG = "MessageRepository"
+        // Feishu batch_create caps at 1000; 200 keeps each request light (WeChat bodies can be long).
+        const val SYNC_BATCH_SIZE = 200
     }
 }

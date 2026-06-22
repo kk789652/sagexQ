@@ -60,8 +60,58 @@ class FeishuSyncClient(
                 if (!response.isSuccessful) {
                     error("Feishu record create failed (${response.code}): ${body.take(300)}")
                 }
+                ensureOk(body, "record create")
             }
         }
+    }
+
+    /**
+     * Batch-create up to [BATCH_LIMIT] records in one request. Used by manual backfill so a large
+     * unsynced queue becomes a handful of requests instead of one-per-message, which previously
+     * starved Room's single writer and stalled notification capture.
+     */
+    suspend fun syncMessages(messages: List<CapturedMessage>) {
+        if (appId.isBlank() || messages.isEmpty()) return
+        require(messages.size <= BATCH_LIMIT) { "batch larger than $BATCH_LIMIT" }
+
+        withContext(ioDispatcher) {
+            val token = getToken()
+            val payload = json.encodeToString(
+                BatchCreateRequest(
+                    records = messages.map { message ->
+                        RecordCreateRequest(
+                            fields = RecordFields(
+                                app = message.sourcePackage,
+                                conversationTitle = message.conversationTitle,
+                                sender = message.sender.orEmpty(),
+                                body = message.body,
+                                postedAt = message.postedAt,
+                                processed = false,
+                            ),
+                        )
+                    },
+                ),
+            )
+            val request = Request.Builder()
+                .url("$recordBaseUrl/$appToken/tables/$messagesTableId/records/batch_create")
+                .addHeader("Authorization", "Bearer $token")
+                .post(payload.toRequestBody(JSON_MEDIA_TYPE))
+                .build()
+
+            httpClient.newCall(request).execute().use { response ->
+                val body = response.body?.string().orEmpty()
+                if (!response.isSuccessful) {
+                    error("Feishu batch create failed (${response.code}): ${body.take(300)}")
+                }
+                ensureOk(body, "batch create")
+            }
+        }
+    }
+
+    /** Feishu returns HTTP 200 even on logical errors; the real status is the `code` field. */
+    private fun ensureOk(body: String, op: String) {
+        val code = runCatching { json.decodeFromString<ApiEnvelope>(body).code }.getOrDefault(0)
+        if (code != 0) error("Feishu $op returned code $code: ${body.take(300)}")
     }
 
     internal suspend fun getToken(): String = withContext(ioDispatcher) {
@@ -92,6 +142,7 @@ class FeishuSyncClient(
     private companion object {
         const val TOKEN_URL = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal"
         const val RECORD_BASE_URL = "https://open.feishu.cn/open-apis/bitable/v1/apps"
+        const val BATCH_LIMIT = 1000
         val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
     }
 }
@@ -109,8 +160,19 @@ private data class TokenResponse(
 )
 
 @Serializable
+private data class BatchCreateRequest(
+    val records: List<RecordCreateRequest>,
+)
+
+@Serializable
 private data class RecordCreateRequest(
     val fields: RecordFields,
+)
+
+@Serializable
+private data class ApiEnvelope(
+    val code: Int = 0,
+    val msg: String = "",
 )
 
 @Serializable

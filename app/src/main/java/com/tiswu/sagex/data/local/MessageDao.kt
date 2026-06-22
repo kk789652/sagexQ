@@ -29,6 +29,9 @@ interface MessageDao {
     @Query("UPDATE messages SET feishu_synced = 1 WHERE id = :id")
     suspend fun markSynced(id: Long)
 
+    @Query("UPDATE messages SET feishu_synced = 1 WHERE id IN (:ids)")
+    suspend fun markSyncedAll(ids: List<Long>)
+
     @Query("SELECT * FROM messages WHERE feishu_synced = 0 ORDER BY postedAt ASC")
     suspend fun unsyncedMessages(): List<MessageEntity>
 
