@@ -13,6 +13,16 @@ val localProps = Properties().also { props ->
     rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { props.load(it) }
 }
 
+// Read a setting from the environment first (CI secrets), falling back to local.properties (dev).
+fun secret(name: String): String? = System.getenv(name) ?: localProps.getProperty(name)
+
+// Optional release keystore: when present (env or local.properties) the release build is signed
+// with it; otherwise it falls back to the debug key so `assembleRelease` still yields an
+// installable APK (handy for CI artifacts and contributors without signing material).
+val releaseStoreFile = secret("RELEASE_STORE_FILE")
+    ?.let { rootProject.file(it) }
+    ?.takeIf { it.exists() }
+
 android {
     namespace = "com.tiswu.sagex"
     compileSdk = 35
@@ -33,6 +43,17 @@ android {
         buildConfigField("String", "FEISHU_MESSAGES_TABLE_ID", "\"${localProps["FEISHU_MESSAGES_TABLE_ID"] ?: ""}\"")
     }
 
+    signingConfigs {
+        if (releaseStoreFile != null) {
+            create("release") {
+                storeFile = releaseStoreFile
+                storePassword = secret("RELEASE_STORE_PASSWORD")
+                keyAlias = secret("RELEASE_KEY_ALIAS")
+                keyPassword = secret("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -40,6 +61,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            // Use the real release key when configured, otherwise fall back to the debug key so the
+            // build always produces an installable APK.
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
         debug {
             applicationIdSuffix = ".debug"

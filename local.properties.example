@@ -1,0 +1,18 @@
+# Copy this file to `local.properties` and fill in your own values.
+# `local.properties` is git-ignored and must never be committed.
+
+# Required: path to your Android SDK.
+sdk.dir=/Users/you/Library/Android/sdk
+
+# Optional: Feishu (Lark) Bitable sync. Leave blank to disable cloud sync —
+# the app works fully offline without these. See README for how to obtain them.
+FEISHU_APP_ID=
+FEISHU_APP_SECRET=
+FEISHU_APP_TOKEN=
+FEISHU_MESSAGES_TABLE_ID=
+
+# Optional: release signing. Leave blank to sign release builds with the debug key.
+# RELEASE_STORE_FILE=release.keystore
+# RELEASE_STORE_PASSWORD=
+# RELEASE_KEY_ALIAS=
+# RELEASE_KEY_PASSWORD=
