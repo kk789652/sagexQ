@@ -37,13 +37,24 @@ class TranscriptExporterTest {
     }
 
     @Test
-    fun `caps to most recent messages`() {
+    fun `caps to most recent messages and notes truncation`() {
         val messages = (1..5).map { msg("m$it", postedAt = 1_700_000_000_000L + it) }
         val text = TranscriptExporter.export("群", messages, "", max = 2, zone = utc)
         assertTrue(text.contains("m4"))
         assertTrue(text.contains("m5"))
         assertTrue(!text.contains("m1"))
         assertTrue(!text.contains("m3"))
+        assertTrue(text.contains("共 5 条"))
+        assertTrue(text.contains("仅包含最近 2 条"))
+    }
+
+    @Test
+    fun `no truncation note when within cap`() {
+        val messages = (1..3).map { msg("m$it", postedAt = 1_700_000_000_000L + it) }
+        val text = TranscriptExporter.export("群", messages, "", max = 10, zone = utc)
+        assertTrue(!text.contains("因体积限制"))
+        assertTrue(text.contains("m1"))
+        assertTrue(text.contains("m3"))
     }
 
     @Test

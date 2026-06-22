@@ -13,10 +13,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -26,14 +28,19 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +57,8 @@ import com.tiswu.sagex.ui.components.Avatar
 import com.tiswu.sagex.ui.components.TimeRangeSelector
 import com.tiswu.sagex.ui.util.relativeTime
 import com.tiswu.sagex.ui.util.shareText
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,8 +68,46 @@ fun ConversationDetailScreen(
     viewModel: ConversationDetailViewModel = hiltViewModel(),
 ) {
     val messages by viewModel.messages.collectAsStateWithLifecycle()
+    val initialReadPosition by viewModel.initialReadPosition.collectAsStateWithLifecycle()
     val title = messages.firstOrNull()?.conversationTitle ?: "会话"
     val context = LocalContext.current
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    var didInitialScroll by remember { mutableStateOf(false) }
+
+    // Position the list once messages and the persisted read position are both available:
+    // restore the last read message if we have one, otherwise land on the newest (bottom).
+    LaunchedEffect(messages, initialReadPosition) {
+        if (didInitialScroll || messages.isEmpty()) return@LaunchedEffect
+        val position = initialReadPosition
+        if (position is ReadPosition.Unknown) return@LaunchedEffect
+        val savedId = (position as? ReadPosition.Loaded)?.messageId
+        val target = savedId
+            ?.let { id -> messages.indexOfFirst { it.id == id }.takeIf { it >= 0 } }
+            ?: messages.lastIndex
+        listState.scrollToItem(target)
+        didInitialScroll = true
+    }
+
+    // Remember where the user is reading: persist the top-most visible message id as they scroll.
+    LaunchedEffect(listState, messages) {
+        snapshotFlow { listState.firstVisibleItemIndex }
+            .distinctUntilChanged()
+            .collect { index ->
+                if (didInitialScroll) {
+                    messages.getOrNull(index)?.id?.let(viewModel::saveReadPosition)
+                }
+            }
+    }
+
+    val showJumpToLatest by remember {
+        derivedStateOf {
+            val lastIndex = listState.layoutInfo.totalItemsCount - 1
+            lastIndex >= 0 &&
+                (listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0) < lastIndex
+        }
+    }
+
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
@@ -101,6 +148,15 @@ fun ConversationDetailScreen(
                 },
             )
         },
+        floatingActionButton = {
+            if (showJumpToLatest) {
+                SmallFloatingActionButton(
+                    onClick = { scope.launch { listState.animateScrollToItem(messages.lastIndex) } },
+                ) {
+                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "跳到最新")
+                }
+            }
+        },
         containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         if (messages.isEmpty()) {
@@ -118,6 +174,7 @@ fun ConversationDetailScreen(
             }
         } else {
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
@@ -151,11 +208,18 @@ fun ConversationDetailScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.export(exportRange) { text ->
-                        if (text == null) {
+                    viewModel.export(exportRange) { result ->
+                        if (result == null) {
                             Toast.makeText(context, "该时间范围内没有可导出的消息", Toast.LENGTH_SHORT).show()
                         } else {
-                            shareText(context, text)
+                            if (result.truncated) {
+                                Toast.makeText(
+                                    context,
+                                    "共 ${result.total} 条,因体积限制仅导出最近 ${result.included} 条",
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                            }
+                            shareText(context, result.text)
                         }
                     }
                     showExportDialog = false
