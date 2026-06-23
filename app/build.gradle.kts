@@ -31,8 +31,8 @@ android {
         applicationId = "com.tiswu.sagex"
         minSdk = 26
         targetSdk = 35
-        versionCode = 202606201
-        versionName = "0.0.1-alpha.20260620"
+        versionCode = 202606231
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
