@@ -93,8 +93,12 @@ class WeChatNotificationParser @Inject constructor() : NotificationParser {
         /** "Sender: content" — sender is a short, single-line, colon-free prefix (ASCII or fullwidth colon). */
         private val SENDER_PREFIX = Regex("^([^:：\\n]{1,32})[:：]\\s?(.*)$", RegexOption.DOT_MATCHES_ALL)
 
-        /** Leading unread-count prefix: "[N条]" or fullwidth "【N条】", optional surrounding spaces. */
-        private val COUNT_PREFIX = Regex("^[\\[【]\\s*\\d+\\s*条\\s*[\\]】]\\s*")
+        /**
+         * Leading unread-count prefix: "[N条]", "【N条】", or the bare "[N]" form WeChat
+         * also emits. The 条 is optional; the digits are not, so bracketed emoji names
+         * like "[鲸鱼]" or "[火箭]Steve." are left alone.
+         */
+        private val COUNT_PREFIX = Regex("^[\\[【]\\s*\\d+\\s*条?\\s*[\\]】]\\s*")
 
         /**
          * Content-less summary notifications (after any bracket prefix has been stripped).

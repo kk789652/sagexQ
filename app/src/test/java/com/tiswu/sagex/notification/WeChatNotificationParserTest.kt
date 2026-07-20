@@ -91,6 +91,43 @@ class WeChatNotificationParserTest {
     }
 
     @Test
+    fun `bare count prefix without 条 is stripped from group message`() {
+        // WeChat also emits "[82]" with no 条; that leaked into sender as "[82]一条鱼".
+        val result = parser.parse(raw(title = "开发群", text = "[82]一条鱼: 融资买杠杆"))
+        result as ParseResult.Parsed
+        assertEquals(ConversationType.GROUP, result.message.conversationType)
+        assertEquals("一条鱼", result.message.sender)
+        assertEquals("融资买杠杆", result.message.body)
+    }
+
+    @Test
+    fun `bare count prefix without 条 is stripped from direct message`() {
+        val result = parser.parse(raw(title = "李四", text = "[12]在吗"))
+        result as ParseResult.Parsed
+        assertEquals(ConversationType.DIRECT, result.message.conversationType)
+        assertEquals("李四", result.message.sender)
+        assertEquals("在吗", result.message.body)
+    }
+
+    @Test
+    fun `bracketed emoji nickname is not mistaken for a count prefix`() {
+        // "[鲸鱼]" / "[火箭]Steve." are real display names — stripping them would
+        // destroy far more rows than the count-prefix bug it is meant to fix.
+        val result = parser.parse(raw(title = "开发群", text = "[火箭]Steve.: 发车了"))
+        result as ParseResult.Parsed
+        assertEquals("[火箭]Steve.", result.message.sender)
+        assertEquals("发车了", result.message.body)
+    }
+
+    @Test
+    fun `bracketed emoji only nickname survives in direct message`() {
+        val result = parser.parse(raw(title = "[鲸鱼]", text = "在吗"))
+        result as ParseResult.Parsed
+        assertEquals("[鲸鱼]", result.message.sender)
+        assertEquals("在吗", result.message.body)
+    }
+
+    @Test
     fun `fullwidth bracket count prefix is stripped`() {
         val result = parser.parse(raw(title = "产品群", text = "【5条】王五: 看一下"))
         result as ParseResult.Parsed
